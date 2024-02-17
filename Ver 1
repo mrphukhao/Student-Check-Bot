@@ -1,0 +1,174 @@
+// Import library
+const LINE_NOTIFY_TOKEN = "gaGRNb1ublIu2AtvYAiTFeBlxjqQA786JcxQzwbH7Bg";
+
+// ฟังก์ชันสำหรับส่งข้อมูลทาง Line Notify
+function sendFormattedTableToLine() {
+  // กำหนด ID ของ Google Sheet
+  const spreadsheetId = "1QxYszCtQ93qHGLzNoyz_94I7IlTiLloeLwyJGwBQSpQ"; // Id Google sheet
+
+  // กำหนดชื่อของ Sheet ที่มีข้อมูล
+  const sheetName = "Total";
+
+  // ดึงข้อมูลจาก Google Sheets โดยใช้ getRange ให้ระบุช่วงที่ต้องการ
+  const sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName(sheetName);
+  const dataRange = sheet.getRange("A1:I16");
+  const values = dataRange.getValues();
+
+  // แบ่งข้อมูลเป็น 5 ช่วง
+  const chunks = [
+    values.slice(1, 4), // ช่วง 1: แถว 2-4
+    values.slice(4, 7), // ช่วง 2: แถว 5-8
+    values.slice(7, 11), // ช่วง 3: แถว 9-12
+    values.slice(11, 15), // ช่วง 4: แถว 13-16
+    values.slice(15) // ช่วง 5: แถว 17
+  ];
+
+  // ส่งข้อมูลทีละช่วง
+  for (let i = 0; i < chunks.length; i++) {
+    const chunk = chunks[i];
+
+    // สร้างข้อความที่จะส่ง
+    let message = "รายงานสถิตินักเรียนประจำวัน ณ วัน " + formatDateThai(new Date()) + "\n\n";
+
+    // วนลูปทุกรายการ
+    for (let j = 0; j < chunk.length; j++) {
+      const row = chunk[j];
+      const formattedRow = row.map((value, index) => {
+        if ((index === 4 || index === 8) && typeof value === 'number') {
+          return value.toFixed(2) + (index === 4 ? " %" : "") + (index === 8 ? " %" : ""); // เพิ่มสัญลักษณ์ % ในคอลัมน์ E และ I
+        } else {
+          return value;
+        }
+      });
+
+      // นำ A1:I1 มาต่อด้วยข้อมูลของแต่ละคอลัมน์ (หัวข้อของข้อมูล)
+      message += values[0].map((header, index) => {
+        return header + ": " + formattedRow[index];
+      }).join('\t') + "\n";
+
+      // เพิ่มขีดล่างในแต่ละแถว
+      message += "---------------------\n";
+    }
+
+    // ส่งข้อความไปยัง Line Notify
+    const options = {
+      "method": "post",
+      "headers": {
+        "Authorization": "Bearer " + LINE_NOTIFY_TOKEN,
+      },
+      "payload": {
+        "message": message,
+      },
+      "muteHttpExceptions": true // เพิ่ม option นี้เพื่อดูข้อความผลลัพธ์ทั้งหมด
+    };
+
+    // ส่งข้อมูลไปยัง Line Notify
+    const response = UrlFetchApp.fetch("https://notify-api.line.me/api/notify", options);
+
+    // แสดงผลลัพธ์
+    Logger.log(response.getContentText());
+  }
+}
+
+// ฟังก์ชันสำหรับฟอร์แมตวันที่เป็นไทย
+function formatDateThai(date) {
+  const day = date.getDate();
+  const month = date.toLocaleString('th-TH', { month: 'long' });
+  const year = date.getFullYear() + 543; // พ.ศ.
+
+  return `${day} ${month} พ.ศ. ${year}`;
+}
+
+function sendNotificationToLine() {
+  // สร้างข้อความที่จะส่ง
+  const message = "สถิติจะถูกสรุปในเวลา 10:00 น. โปรดกรอกข้อมูลให้ครบถ้วน ";
+
+  // กำหนด options สำหรับส่งข้อความ
+  const options = {
+    "method": "post",
+    "headers": {
+      "Authorization": "Bearer " + LINE_NOTIFY_TOKEN,
+    },
+    "payload": {
+      "message": message,
+    },
+    "muteHttpExceptions": true // เพิ่ม option นี้เพื่อดูข้อความผลลัพธ์ทั้งหมด
+  };
+  // ส่งข้อความไปยัง Line Notify
+  const response = UrlFetchApp.fetch("https://notify-api.line.me/api/notify", options);
+
+  // แสดงผลลัพธ์
+  Logger.log(response.getContentText());
+}
+
+function sendNotificationPDFToLine() {
+  // สร้างข้อความที่จะส่ง
+  const message = "สถิติถูกสรุป และบันทึกเข้าไดร์ฟเรียบร้อยแล้ว --------------แนปลิงค์ไดร์ฟ-----------";
+
+  // กำหนด options สำหรับส่งข้อความ
+  const options = {
+    "method": "post",
+    "headers": {
+      "Authorization": "Bearer " + LINE_NOTIFY_TOKEN,
+    },
+    "payload": {
+      "message": message,
+    },
+    "muteHttpExceptions": true // เพิ่ม option นี้เพื่อดูข้อความผลลัพธ์ทั้งหมด
+  };
+  // ส่งข้อความไปยัง Line Notify
+  const response = UrlFetchApp.fetch("https://notify-api.line.me/api/notify", options);
+
+  // แสดงผลลัพธ์
+  Logger.log(response.getContentText());
+}
+
+
+// ฟังก์ชันในการแทนที่ข้อมูล TRUE เป็น FALSE ในแต่ละชีท
+function replaceTrueWithFalse() {
+  // กำหนด ID ของ Google Sheet
+  const spreadsheetId = "1QxYszCtQ93qHGLzNoyz_94I7IlTiLloeLwyJGwBQSpQ";
+
+  // รายชื่อชีทที่ต้องการแทนที่
+  const sheetNames = ["A.2", "A.3", "P.1", "P.2", "P.3", "P.4", "P.5", "P.6", "M.1", "M.2", "M.3"];
+
+  // ดึงข้อมูลในแต่ละชีท
+  sheetNames.forEach(sheetName => {
+    // ดึงข้อมูลจาก Google Sheets
+    const sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName(sheetName);
+
+    // ดึงข้อมูลในคอลัมน์ D ทุกแถว
+    const dataRange = sheet.getRange("D:D");
+    const values = dataRange.getValues();
+
+    // ทำการแทนที่ข้อมูล TRUE เป็น FALSE
+    const updatedValues = values.map(row => row.map(cell => cell === true ? false : cell));
+
+    // นำข้อมูลที่ถูกแก้ไขกลับไปที่ Google Sheet
+    dataRange.setValues(updatedValues);
+  });
+}
+
+function exportSheetToPdfAndDrive() {
+  // ID ของ Google Sheet
+  const spreadsheetId = '1QxYszCtQ93qHGLzNoyz_94I7IlTiLloeLwyJGwBQSpQ'; // ID google sheet 
+  // ID ของ Google Drive Folder
+  const folderId = '16BSjyvsqM7pKn4_WSAVbJgt4tsbkcaqr'; // ID โฟลเดอร์
+
+  // ดึงข้อมูลจาก Google Sheets
+  const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+
+  // กำหนดวันที่และเวลาในรูปแบบ 'dd.MM.yyyy_HHmmss'
+  const currentDate = Utilities.formatDate(new Date(), 'GMT+7', 'dd.MM.yyyy_HHmmss');
+
+  // สร้าง Blob จาก Google Sheet
+  const pdfBlob = spreadsheet.getAs('application/pdf').setName('std_check_' + currentDate + '.pdf');
+
+  // บันทึกไฟล์ PDF ลงใน Google Drive
+  if (folderId) {
+    const folder = DriveApp.getFolderById(folderId);
+    folder.createFile(pdfBlob);
+  } else {
+    DriveApp.createFile(pdfBlob);
+  }
+}
